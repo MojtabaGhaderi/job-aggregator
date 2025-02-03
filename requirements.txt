@@ -3,3 +3,5 @@ requests
 celery
 redis
 psycopg2
+django
+python-decouple

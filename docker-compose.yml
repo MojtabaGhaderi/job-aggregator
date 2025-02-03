@@ -1,27 +1,67 @@
 version: '3.8'
+
 services:
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=job_aggregator
+      - POSTGRES_USER=job_aggregator_user
+      - POSTGRES_PASSWORD=123
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+
   web:
     build: .
-    command: bash -c "python manage.py wait_for_db && python manage.py test && python manage.py runserver 0.0.0.0:8000"
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
     ports:
       - "8000:8000"
-    depends_on:
-      - redis
-      - db
-
-  redis:
-    image: redis:alpine
-
-  db:
-    image: postgres:15
     environment:
-      POSTGRES_DB: job_aggregator
-      POSTGRES_USER: job_aggregator_user
-      POSTGRES_PASSWORD: 123
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - DB_HOST=db
+      - DB_PORT=5432
+      - POSTGRES_DB=job_aggregator
+      - POSTGRES_USER=job_aggregator_user
+      - POSTGRES_PASSWORD=123
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    networks:
+      - app-network
+
+  celery:
+    build: .
+    command: celery -A job_aggregator  worker --loglevel=info
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - POSTGRES_DB=job_aggregator
+      - POSTGRES_USER=job_aggregator_user
+      - POSTGRES_PASSWORD=123
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+      - web
+    networks:
+      - app-network
 
 volumes:
   postgres_data:
+  redis_data:
+
+networks:
+  app-network:
+    driver: bridge
