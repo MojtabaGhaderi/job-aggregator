@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Job Listings</title>
+</head>
+<body>
+    <h1>Job Listings</h1>
+    <form method="get">
+        <input type="text" name="q" value="{{ query }}" placeholder="Search by title or company...">
+        <button type="submit">Search</button>
+    </form>
+    <ul>
+        {% for job in jobs %}
+            <li><a href="{{ job.link }}">{{ job.title }} at {{ job.company }}</a></li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
